@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+
+MAVEN_PROJECTBASEDIR="$(cd "$(dirname "$0")" && pwd)"
+WRAPPER_JAR="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.jar"
+WRAPPER_PROPERTIES="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.properties"
+
+if [ ! -f "$WRAPPER_JAR" ]; then
+  echo "Maven Wrapper jar not found: $WRAPPER_JAR" >&2
+  echo "Download it from wrapperUrl in: $WRAPPER_PROPERTIES" >&2
+  exit 1
+fi
+
+exec java -classpath "$WRAPPER_JAR" -Dmaven.multiModuleProjectDirectory="$MAVEN_PROJECTBASEDIR" org.apache.maven.wrapper.MavenWrapperMain "$@"

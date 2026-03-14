@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: wms-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/wms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:wms}
+    password: ${SPRING_DATASOURCE_PASSWORD:wms_password}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  jwt:
+    issuer: wms
+    secret: ${JWT_SECRET:dev-secret-change-me-dev-secret-change-me}
+    expirationMinutes: ${JWT_EXPIRATION_MINUTES:60}
+    clockSkewSeconds: ${JWT_CLOCK_SKEW_SECONDS:30}
