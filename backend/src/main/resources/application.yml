@@ -22,6 +22,18 @@ spring:
   flyway:
     enabled: true
 
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 management:
   endpoints:
     web:
@@ -33,4 +45,15 @@ app:
     issuer: wms
     secret: ${JWT_SECRET}
     expirationMinutes: ${JWT_EXPIRATION_MINUTES}
+    refreshExpirationMinutes: ${JWT_REFRESH_EXPIRATION_MINUTES}
     clockSkewSeconds: ${JWT_CLOCK_SKEW_SECONDS}
+
+  admin:
+    email: ${APP_ADMIN_EMAIL}
+    password: ${APP_ADMIN_PASSWORD}
+    name: ${APP_ADMIN_NAME:Super Admin}
+
+  mail:
+    from: ${APP_MAIL_FROM}
+    verifyBaseUrl: ${APP_VERIFY_BASE_URL:http://localhost:5173/verify-email}
+    resetBaseUrl: ${APP_RESET_BASE_URL:http://localhost:5173/reset-password}
