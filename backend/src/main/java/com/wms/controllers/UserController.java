@@ -20,7 +20,9 @@ import com.wms.dtos.request.UpdateUserRequest;
 import com.wms.dtos.request.UpdateUserStatusRequest;
 import com.wms.dtos.response.ApiResponse;
 import com.wms.dtos.response.UserResponse;
+import com.wms.dtos.response.WarehouseResponse;
 import com.wms.services.UserService;
+import com.wms.services.WarehouseService;
 
 import jakarta.validation.Valid;
 
@@ -30,9 +32,11 @@ import jakarta.validation.Valid;
 public class UserController {
 
     private final UserService userService;
+    private final WarehouseService warehouseService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, WarehouseService warehouseService) {
         this.userService = userService;
+        this.warehouseService = warehouseService;
     }
 
     @PostMapping
@@ -48,6 +52,11 @@ public class UserController {
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserResponse>> get(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.ok("User fetched", userService.getUser(userId)));
+    }
+
+    @GetMapping("/{userId}/managed-warehouses")
+    public ResponseEntity<ApiResponse<List<WarehouseResponse>>> getManagedWarehouses(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok("Managed warehouses fetched", warehouseService.getManagedWarehouses(userId)));
     }
 
     @PutMapping("/{userId}")
