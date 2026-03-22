@@ -9,6 +9,8 @@ import com.wms.models.Order;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    List<Order> findAllByOrderByOrderDateDesc();
+
     List<Order> findByCustomerCustomerIdOrderByOrderDateDesc(Long customerId);
 
     Optional<Order> findByOrderIdAndCustomerCustomerId(Long orderId, Long customerId);
