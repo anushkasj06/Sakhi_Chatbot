@@ -12,7 +12,7 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
-  const userRoles = user?.roles?.map(role => role.name) || [];
+  const userRoles = user?.roles || [];
   const isAdmin = userRoles.includes('ADMIN');
   const isWarehouseManager = userRoles.includes('WAREHOUSE_MANAGER');
 
@@ -61,7 +61,7 @@ const Layout = ({ children }) => {
 
         <div className="navbar-user">
           <div className="user-info">
-            <span className="user-name">{user?.firstName} {user?.lastName}</span>
+            <span className="user-name">{user?.email}</span>
             <span className="user-role">{userRoles[0] || 'User'}</span>
           </div>
           <button onClick={handleLogout} className="btn-logout">

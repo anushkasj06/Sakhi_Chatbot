@@ -3,40 +3,80 @@ import authService from '../services/authService';
 
 const AuthContext = createContext(null);
 
+// Helper function to decode JWT token
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
     const accessToken = localStorage.getItem('accessToken');
     
-    if (storedUser && accessToken) {
-      setUser(JSON.parse(storedUser));
+    if (accessToken) {
+      const decoded = decodeToken(accessToken);
+      if (decoded) {
+        setUser({
+          id: decoded.sub,
+          email: decoded.email,
+          roles: decoded.roles || [],
+        });
+      }
     }
     setLoading(false);
   }, []);
 
   const login = async (credentials) => {
     const response = await authService.login(credentials);
-    const { accessToken, refreshToken, user: userData } = response.data;
+    const { accessToken, refreshToken } = response.data;
     
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+    
+    const decoded = decodeToken(accessToken);
+    if (decoded) {
+      const userData = {
+        id: decoded.sub,
+        email: decoded.email,
+        roles: decoded.roles || [],
+      };
+      setUser(userData);
+    }
     
     return response;
   };
 
   const signup = async (data) => {
     const response = await authService.customerSignup(data);
-    const { accessToken, refreshToken, user: userData } = response.data;
+    const { accessToken, refreshToken } = response.data;
     
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+    
+    const decoded = decodeToken(accessToken);
+    if (decoded) {
+      const userData = {
+        id: decoded.sub,
+        email: decoded.email,
+        roles: decoded.roles || [],
+      };
+      setUser(userData);
+    }
     
     return response;
   };
@@ -53,7 +93,6 @@ export const AuthProvider = ({ children }) => {
     
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
     setUser(null);
   };
 

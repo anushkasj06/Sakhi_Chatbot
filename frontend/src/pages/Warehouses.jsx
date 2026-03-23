@@ -12,7 +12,7 @@ const Warehouses = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const { user } = useAuth();
 
-  const userRoles = user?.roles?.map(role => role.name) || [];
+  const userRoles = user?.roles || [];
   const isAdmin = userRoles.includes('ADMIN');
 
   useEffect(() => {
