@@ -41,12 +41,21 @@ const Layout = ({ children }) => {
           </Link>
 
           {(isAdmin || isWarehouseManager) && (
-            <Link 
-              to="/warehouses" 
-              className={`nav-link ${isActive('/warehouses') ? 'active' : ''}`}
-            >
-              Warehouses
-            </Link>
+            <>
+              <Link 
+                to="/suppliers" 
+                className={`nav-link ${isActive('/suppliers') ? 'active' : ''}`}
+              >
+                Suppliers
+              </Link>
+
+              <Link 
+                to="/warehouses" 
+                className={`nav-link ${isActive('/warehouses') ? 'active' : ''}`}
+              >
+                Warehouses
+              </Link>
+            </>
           )}
 
           {isAdmin && (

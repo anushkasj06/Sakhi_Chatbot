@@ -1,31 +1,41 @@
 import { useState, useEffect } from 'react';
 import productService from '../services/productService';
+import supplierService from '../services/supplierService';
 import './Modal.css';
 
 const ProductModal = ({ product, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sku: '',
     price: '',
     category: '',
-    weight: '',
+    supplierId: '',
   });
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    fetchSuppliers();
     if (product) {
       setFormData({
         name: product.name || '',
         description: product.description || '',
-        sku: product.sku || '',
         price: product.price || '',
         category: product.category || '',
-        weight: product.weight || '',
+        supplierId: product.supplierId || '',
       });
     }
   }, [product]);
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await supplierService.getAll();
+      setSuppliers(response.data || []);
+    } catch (err) {
+      console.error('Failed to fetch suppliers:', err);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,14 +48,30 @@ const ProductModal = ({ product, onClose }) => {
     setError('');
 
     try {
+      const submitData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        supplierId: parseInt(formData.supplierId),
+      };
+
       if (product) {
-        await productService.update(product.id, formData);
+        await productService.update(product.productId, submitData);
       } else {
-        await productService.create(formData);
+        await productService.create(submitData);
       }
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Operation failed');
+      const errorMessage = err.response?.data?.message || 'Operation failed';
+      const errorData = err.response?.data?.data;
+      
+      if (errorData && typeof errorData === 'object') {
+        const validationErrors = Object.entries(errorData)
+          .map(([field, message]) => `${field}: ${message}`)
+          .join(', ');
+        setError(`Validation failed: ${validationErrors}`);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -76,19 +102,6 @@ const ProductModal = ({ product, onClose }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="sku">SKU</label>
-            <input
-              type="text"
-              id="sku"
-              name="sku"
-              value={formData.sku}
-              onChange={handleChange}
-              required
-              placeholder="Enter SKU"
-            />
-          </div>
-
-          <div className="form-group">
             <label htmlFor="description">Description</label>
             <textarea
               id="description"
@@ -111,43 +124,53 @@ const ProductModal = ({ product, onClose }) => {
                 onChange={handleChange}
                 required
                 step="0.01"
-                min="0"
+                min="0.01"
                 placeholder="0.00"
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="weight">Weight (kg)</label>
+              <label htmlFor="category">Category</label>
               <input
-                type="number"
-                id="weight"
-                name="weight"
-                value={formData.weight}
+                type="text"
+                id="category"
+                name="category"
+                value={formData.category}
                 onChange={handleChange}
-                step="0.01"
-                min="0"
-                placeholder="0.00"
+                required
+                placeholder="Enter category"
               />
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="category">Category</label>
-            <input
-              type="text"
-              id="category"
-              name="category"
-              value={formData.category}
+            <label htmlFor="supplierId">Supplier</label>
+            <select
+              id="supplierId"
+              name="supplierId"
+              value={formData.supplierId}
               onChange={handleChange}
-              placeholder="Enter category"
-            />
+              required
+            >
+              <option value="">Select a supplier</option>
+              {suppliers.map((supplier) => (
+                <option key={supplier.supplierId} value={supplier.supplierId}>
+                  {supplier.sName} (ID: {supplier.supplierId})
+                </option>
+              ))}
+            </select>
+            {suppliers.length === 0 && (
+              <small style={{ color: '#e53e3e', fontSize: '12px', fontWeight: '500' }}>
+                No suppliers available. Please create a supplier first in the Suppliers page.
+              </small>
+            )}
           </div>
 
           <div className="modal-actions">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={loading}>
+            <button type="submit" className="btn-primary" disabled={loading || suppliers.length === 0}>
               {loading ? 'Saving...' : product ? 'Update' : 'Create'}
             </button>
           </div>
