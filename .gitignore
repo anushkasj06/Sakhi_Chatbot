@@ -14,3 +14,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.iml
+
+# Project documentation
+FRONTEND_MILESTONE AND ISSUES.md

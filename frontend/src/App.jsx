@@ -1,23 +1,37 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import './App.css';
 
 function App() {
-
   return (
-    <>
-      <div>
-        <br/>
-        <h1>Warehouse Management System</h1>
-        <br/>
-        <p>Welcome to the Warehouse Management System! This application allows you to manage inventory, track shipments, and optimize warehouse operations efficiently.</p>
-        <br/><br/>
-        <img src={heroImg} alt="Warehouse Management" className="hero-image" />
-        <br/><br/><br/>
-        <p>Comming Soon...</p>
-      </div>
-    </>
-  )
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
+  );
 }
 
-export default App
+export default App;
