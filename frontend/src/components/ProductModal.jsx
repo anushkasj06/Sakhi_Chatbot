@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import productService from '../services/productService';
+import supplierService from '../services/supplierService';
 import './Modal.css';
 
 const ProductModal = ({ product, onClose }) => {
@@ -10,20 +11,31 @@ const ProductModal = ({ product, onClose }) => {
     category: '',
     supplierId: '',
   });
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    fetchSuppliers();
     if (product) {
       setFormData({
         name: product.name || '',
         description: product.description || '',
         price: product.price || '',
         category: product.category || '',
-        supplierId: product.supplier?.supplierId || '',
+        supplierId: product.supplierId || '',
       });
     }
   }, [product]);
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await supplierService.getAll();
+      setSuppliers(response.data || []);
+    } catch (err) {
+      console.error('Failed to fetch suppliers:', err);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -53,7 +65,6 @@ const ProductModal = ({ product, onClose }) => {
       const errorData = err.response?.data?.data;
       
       if (errorData && typeof errorData === 'object') {
-        // Display validation errors
         const validationErrors = Object.entries(errorData)
           .map(([field, message]) => `${field}: ${message}`)
           .join(', ');
@@ -133,27 +144,33 @@ const ProductModal = ({ product, onClose }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="supplierId">Supplier ID</label>
-            <input
-              type="number"
+            <label htmlFor="supplierId">Supplier</label>
+            <select
               id="supplierId"
               name="supplierId"
               value={formData.supplierId}
               onChange={handleChange}
               required
-              min="1"
-              placeholder="Enter supplier ID"
-            />
-            <small style={{ color: '#e53e3e', fontSize: '12px', fontWeight: '500' }}>
-              Important: You must create a supplier first. Use supplier ID 1 for testing if you have created one.
-            </small>
+            >
+              <option value="">Select a supplier</option>
+              {suppliers.map((supplier) => (
+                <option key={supplier.supplierId} value={supplier.supplierId}>
+                  {supplier.sName} (ID: {supplier.supplierId})
+                </option>
+              ))}
+            </select>
+            {suppliers.length === 0 && (
+              <small style={{ color: '#e53e3e', fontSize: '12px', fontWeight: '500' }}>
+                No suppliers available. Please create a supplier first in the Suppliers page.
+              </small>
+            )}
           </div>
 
           <div className="modal-actions">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={loading}>
+            <button type="submit" className="btn-primary" disabled={loading || suppliers.length === 0}>
               {loading ? 'Saving...' : product ? 'Update' : 'Create'}
             </button>
           </div>

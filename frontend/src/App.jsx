@@ -8,6 +8,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
+import Suppliers from './pages/Suppliers';
 import Users from './pages/Users';
 import Warehouses from './pages/Warehouses';
 import './App.css';
@@ -39,6 +40,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Products />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/suppliers"
+            element={
+              <ProtectedRoute roles={['ADMIN', 'WAREHOUSE_MANAGER']}>
+                <Layout>
+                  <Suppliers />
                 </Layout>
               </ProtectedRoute>
             }
