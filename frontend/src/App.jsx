@@ -7,6 +7,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Users from './pages/Users';
+import Warehouses from './pages/Warehouses';
 import './App.css';
 
 function App() {
@@ -34,6 +35,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Products />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/warehouses"
+            element={
+              <ProtectedRoute roles={['ADMIN', 'WAREHOUSE_MANAGER']}>
+                <Layout>
+                  <Warehouses />
                 </Layout>
               </ProtectedRoute>
             }
