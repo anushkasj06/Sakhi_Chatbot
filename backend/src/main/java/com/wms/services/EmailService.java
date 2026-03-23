@@ -31,6 +31,16 @@ public class EmailService {
         send(to, "Reset your WMS password", "Click to reset your password: " + link + "\nToken: " + token);
     }
 
+    public void sendLowStockAlertEmail(String to, String productName, String warehouseLocation, Integer currentQty, Integer threshold) {
+        String subject = "Low stock alert - " + productName;
+        String body = "Product: " + productName
+            + "\nWarehouse: " + warehouseLocation
+            + "\nCurrent quantity: " + currentQty
+            + "\nThreshold: " + threshold
+            + "\nAction needed: Please review and initiate replenishment.";
+        send(to, subject, body);
+    }
+
     private void send(String to, String subject, String body) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();

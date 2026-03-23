@@ -9,4 +9,8 @@ import com.wms.models.Product;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByNameContainingIgnoreCaseOrCategoryContainingIgnoreCase(String name, String category);
+
+    List<Product> findBySupplierSupplierId(Long supplierId);
+
+    boolean existsBySupplierSupplierId(Long supplierId);
 }

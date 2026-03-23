@@ -340,6 +340,14 @@ Common response envelope:
 - POST /inventory/transfers
 - GET /inventory/low-stock
 
+### 15.1 Low-Stock Alert APIs
+- GET /alerts/low-stock
+  - query params: status (optional), mineOnly (optional)
+- POST /alerts/low-stock/{alertId}/acknowledge
+- POST /alerts/low-stock/{alertId}/resolve
+- POST /alerts/low-stock/scan
+  - manual scan trigger (admin/warehouse-manager)
+
 Adjustment payload includes:
 - warehouseId
 - productId
