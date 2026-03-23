@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
+import Users from './pages/Users';
 import './App.css';
 
 function App() {
@@ -33,6 +34,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Products />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute roles={['ADMIN']}>
+                <Layout>
+                  <Users />
                 </Layout>
               </ProtectedRoute>
             }
