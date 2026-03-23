@@ -5,12 +5,12 @@ import './Auth.css';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
+    address: '',
+    phoneNum: '',
     email: '',
     password: '',
     confirmPassword: '',
-    phoneNumber: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -56,32 +56,17 @@ const Signup = () => {
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="error-message">{error}</div>}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="firstName">First Name</label>
-              <input
-                type="text"
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                placeholder="First name"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="lastName">Last Name</label>
-              <input
-                type="text"
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                placeholder="Last name"
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="name">Full Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Enter your full name"
+            />
           </div>
 
           <div className="form-group">
@@ -99,14 +84,29 @@ const Signup = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="phoneNumber">Phone Number</label>
+            <label htmlFor="phoneNum">Phone Number</label>
             <input
               type="tel"
-              id="phoneNumber"
-              name="phoneNumber"
-              value={formData.phoneNumber}
+              id="phoneNum"
+              name="phoneNum"
+              value={formData.phoneNum}
               onChange={handleChange}
+              required
               placeholder="Enter your phone number"
+              maxLength="20"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="address">Address</label>
+            <input
+              type="text"
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+              placeholder="Enter your address"
             />
           </div>
 
@@ -121,6 +121,7 @@ const Signup = () => {
               required
               placeholder="Create a password"
               autoComplete="new-password"
+              minLength="8"
             />
           </div>
 

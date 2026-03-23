@@ -4,32 +4,51 @@ import './Modal.css';
 
 const UserModal = ({ user, onClose }) => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     password: '',
-    phoneNumber: '',
-    status: 'ACTIVE',
+    active: true,
+    roles: [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const availableRoles = [
+    'ADMIN',
+    'WAREHOUSE_MANAGER',
+    'RECEIVING_CLERK',
+    'PICKER',
+    'PACKER',
+    'CUSTOMER_SERVICE',
+    'FINANCE',
+    'AUDITOR',
+    'CUSTOMER',
+  ];
+
   useEffect(() => {
     if (user) {
       setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
+        name: user.name || '',
         email: user.email || '',
         password: '',
-        phoneNumber: user.phoneNumber || '',
-        status: user.status || 'ACTIVE',
+        active: user.active !== undefined ? user.active : true,
+        roles: user.roles || [],
       });
     }
   }, [user]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData({ 
+      ...formData, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
     setError('');
+  };
+
+  const handleRoleChange = (e) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    setFormData({ ...formData, roles: selectedOptions });
   };
 
   const handleSubmit = async (e) => {
@@ -44,7 +63,7 @@ const UserModal = ({ user, onClose }) => {
       }
 
       if (user) {
-        await userService.update(user.id, submitData);
+        await userService.update(user.userId, submitData);
       } else {
         await userService.create(submitData);
       }
@@ -67,32 +86,17 @@ const UserModal = ({ user, onClose }) => {
         <form onSubmit={handleSubmit} className="modal-form">
           {error && <div className="error-message">{error}</div>}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="firstName">First Name</label>
-              <input
-                type="text"
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                placeholder="First name"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="lastName">Last Name</label>
-              <input
-                type="text"
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                placeholder="Last name"
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="name">Full Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Enter full name"
+            />
           </div>
 
           <div className="form-group">
@@ -109,18 +113,6 @@ const UserModal = ({ user, onClose }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="phoneNumber">Phone Number</label>
-            <input
-              type="tel"
-              id="phoneNumber"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              placeholder="Enter phone number"
-            />
-          </div>
-
-          <div className="form-group">
             <label htmlFor="password">
               Password {user && '(leave blank to keep current)'}
             </label>
@@ -131,22 +123,44 @@ const UserModal = ({ user, onClose }) => {
               value={formData.password}
               onChange={handleChange}
               required={!user}
+              minLength="8"
               placeholder={user ? 'Leave blank to keep current' : 'Enter password'}
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="status">Status</label>
+            <label htmlFor="roles">Roles</label>
             <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
+              id="roles"
+              name="roles"
+              multiple
+              value={formData.roles}
+              onChange={handleRoleChange}
               required
+              size="5"
+              style={{ height: 'auto' }}
             >
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              {availableRoles.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
             </select>
+            <small style={{ color: '#718096', fontSize: '12px' }}>
+              Hold Ctrl (Cmd on Mac) to select multiple roles
+            </small>
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                name="active"
+                checked={formData.active}
+                onChange={handleChange}
+              />
+              Active
+            </label>
           </div>
 
           <div className="modal-actions">

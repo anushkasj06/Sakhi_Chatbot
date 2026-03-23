@@ -4,13 +4,13 @@ import './Dashboard.css';
 const Dashboard = () => {
   const { user } = useAuth();
 
-  const userRoles = user?.roles?.map(role => role.name) || [];
+  const userRoles = user?.roles || [];
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
         <h1>Dashboard</h1>
-        <p>Welcome back, {user?.firstName} {user?.lastName}</p>
+        <p>Welcome back, {user?.email}</p>
       </div>
 
       <div className="dashboard-content">
@@ -22,19 +22,13 @@ const Dashboard = () => {
               <span className="info-value">{user?.email}</span>
             </div>
             <div className="info-item">
-              <span className="info-label">Phone:</span>
-              <span className="info-value">{user?.phoneNumber || 'Not provided'}</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">Status:</span>
-              <span className={`status-badge ${user?.status?.toLowerCase()}`}>
-                {user?.status}
-              </span>
+              <span className="info-label">User ID:</span>
+              <span className="info-value">{user?.id}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Roles:</span>
               <span className="info-value">
-                {userRoles.join(', ') || 'No roles assigned'}
+                {userRoles.length > 0 ? userRoles.join(', ') : 'No roles assigned'}
               </span>
             </div>
           </div>

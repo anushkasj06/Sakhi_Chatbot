@@ -13,7 +13,7 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const { user } = useAuth();
 
-  const userRoles = user?.roles?.map(role => role.name) || [];
+  const userRoles = user?.roles || [];
   const canManage = userRoles.includes('ADMIN') || userRoles.includes('WAREHOUSE_MANAGER');
 
   useEffect(() => {

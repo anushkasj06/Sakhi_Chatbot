@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
   }
 
   if (roles.length > 0) {
-    const userRoles = user.roles?.map(role => role.name) || [];
+    const userRoles = user.roles || [];
     const hasRequiredRole = roles.some(role => userRoles.includes(role));
     
     if (!hasRequiredRole) {

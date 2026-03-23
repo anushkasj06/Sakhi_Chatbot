@@ -42,9 +42,9 @@ const Users = () => {
   };
 
   const handleStatusToggle = async (user) => {
-    const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const newStatus = user.active ? false : true;
     try {
-      await userService.updateStatus(user.id, newStatus);
+      await userService.updateStatus(user.userId, newStatus);
       fetchUsers();
     } catch (err) {
       alert('Failed to update user status');
@@ -104,23 +104,23 @@ const Users = () => {
                 <tr key={user.id}>
                   <td>
                     <div className="user-name-cell">
-                      {user.firstName} {user.lastName}
+                      {user.name}
                     </div>
                   </td>
                   <td>{user.email}</td>
-                  <td>{user.phoneNumber || '-'}</td>
+                  <td>-</td>
                   <td>
                     <div className="roles-cell">
-                      {user.roles?.map((role) => (
-                        <span key={role.id} className="role-badge">
-                          {role.name}
+                      {user.roles?.map((role, index) => (
+                        <span key={index} className="role-badge">
+                          {role}
                         </span>
                       ))}
                     </div>
                   </td>
                   <td>
-                    <span className={`status-badge ${user.status?.toLowerCase()}`}>
-                      {user.status}
+                    <span className={`status-badge ${user.active ? 'active' : 'inactive'}`}>
+                      {user.active ? 'ACTIVE' : 'INACTIVE'}
                     </span>
                   </td>
                   <td>
@@ -137,10 +137,10 @@ const Users = () => {
                         className="btn-icon"
                         title="Toggle Status"
                       >
-                        {user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                        {user.active ? 'Deactivate' : 'Activate'}
                       </button>
                       <button
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => handleDelete(user.userId)}
                         className="btn-icon btn-danger"
                         title="Delete"
                       >
