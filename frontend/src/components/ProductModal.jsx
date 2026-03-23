@@ -6,10 +6,9 @@ const ProductModal = ({ product, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sku: '',
     price: '',
     category: '',
-    weight: '',
+    supplierId: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,10 +18,9 @@ const ProductModal = ({ product, onClose }) => {
       setFormData({
         name: product.name || '',
         description: product.description || '',
-        sku: product.sku || '',
         price: product.price || '',
         category: product.category || '',
-        weight: product.weight || '',
+        supplierId: product.supplier?.supplierId || '',
       });
     }
   }, [product]);
@@ -38,14 +36,31 @@ const ProductModal = ({ product, onClose }) => {
     setError('');
 
     try {
+      const submitData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        supplierId: parseInt(formData.supplierId),
+      };
+
       if (product) {
-        await productService.update(product.id, formData);
+        await productService.update(product.productId, submitData);
       } else {
-        await productService.create(formData);
+        await productService.create(submitData);
       }
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Operation failed');
+      const errorMessage = err.response?.data?.message || 'Operation failed';
+      const errorData = err.response?.data?.data;
+      
+      if (errorData && typeof errorData === 'object') {
+        // Display validation errors
+        const validationErrors = Object.entries(errorData)
+          .map(([field, message]) => `${field}: ${message}`)
+          .join(', ');
+        setError(`Validation failed: ${validationErrors}`);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -76,19 +91,6 @@ const ProductModal = ({ product, onClose }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="sku">SKU</label>
-            <input
-              type="text"
-              id="sku"
-              name="sku"
-              value={formData.sku}
-              onChange={handleChange}
-              required
-              placeholder="Enter SKU"
-            />
-          </div>
-
-          <div className="form-group">
             <label htmlFor="description">Description</label>
             <textarea
               id="description"
@@ -111,36 +113,40 @@ const ProductModal = ({ product, onClose }) => {
                 onChange={handleChange}
                 required
                 step="0.01"
-                min="0"
+                min="0.01"
                 placeholder="0.00"
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="weight">Weight (kg)</label>
+              <label htmlFor="category">Category</label>
               <input
-                type="number"
-                id="weight"
-                name="weight"
-                value={formData.weight}
+                type="text"
+                id="category"
+                name="category"
+                value={formData.category}
                 onChange={handleChange}
-                step="0.01"
-                min="0"
-                placeholder="0.00"
+                required
+                placeholder="Enter category"
               />
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="category">Category</label>
+            <label htmlFor="supplierId">Supplier ID</label>
             <input
-              type="text"
-              id="category"
-              name="category"
-              value={formData.category}
+              type="number"
+              id="supplierId"
+              name="supplierId"
+              value={formData.supplierId}
               onChange={handleChange}
-              placeholder="Enter category"
+              required
+              min="1"
+              placeholder="Enter supplier ID"
             />
+            <small style={{ color: '#e53e3e', fontSize: '12px', fontWeight: '500' }}>
+              Important: You must create a supplier first. Use supplier ID 1 for testing if you have created one.
+            </small>
           </div>
 
           <div className="modal-actions">

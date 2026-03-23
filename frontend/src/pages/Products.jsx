@@ -117,12 +117,12 @@ const Products = () => {
       ) : (
         <div className="products-grid">
           {products.map((product) => (
-            <div key={product.id} className="product-card">
+            <div key={product.productId} className="product-card">
               <div className="product-header">
                 <h3>{product.name}</h3>
-                <span className="product-sku">{product.sku}</span>
+                <span className="product-sku">{product.category}</span>
               </div>
-              <p className="product-description">{product.description}</p>
+              <p className="product-description">{product.description || 'No description'}</p>
               <div className="product-details">
                 <div className="detail-item">
                   <span className="label">Price:</span>
@@ -133,8 +133,8 @@ const Products = () => {
                   <span className="value">{product.category}</span>
                 </div>
                 <div className="detail-item">
-                  <span className="label">Weight:</span>
-                  <span className="value">{product.weight} kg</span>
+                  <span className="label">Supplier:</span>
+                  <span className="value">{product.supplierName || 'N/A'}</span>
                 </div>
               </div>
               {canManage && (
@@ -142,7 +142,7 @@ const Products = () => {
                   <button onClick={() => handleEdit(product)} className="btn-edit">
                     Edit
                   </button>
-                  <button onClick={() => handleDelete(product.id)} className="btn-delete">
+                  <button onClick={() => handleDelete(product.productId)} className="btn-delete">
                     Delete
                   </button>
                 </div>
