@@ -25,6 +25,7 @@ import com.wms.dtos.response.PurchaseOrderItemResponse;
 import com.wms.dtos.response.PurchaseOrderResponse;
 import com.wms.exceptions.ApiException;
 import com.wms.models.Inventory;
+import com.wms.models.InventoryMovement;
 import com.wms.models.Product;
 import com.wms.models.PurchaseOrder;
 import com.wms.models.PurchaseOrderItem;
@@ -32,6 +33,7 @@ import com.wms.models.Supplier;
 import com.wms.models.User;
 import com.wms.models.Warehouse;
 import com.wms.repositories.InventoryRepository;
+import com.wms.repositories.InventoryMovementRepository;
 import com.wms.repositories.ProductRepository;
 import com.wms.repositories.PurchaseOrderItemRepository;
 import com.wms.repositories.PurchaseOrderRepository;
@@ -55,7 +57,9 @@ public class PurchaseOrderService {
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
+    private final InventoryMovementRepository inventoryMovementRepository;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     public PurchaseOrderService(
         PurchaseOrderRepository purchaseOrderRepository,
@@ -64,7 +68,9 @@ public class PurchaseOrderService {
         WarehouseRepository warehouseRepository,
         ProductRepository productRepository,
         InventoryRepository inventoryRepository,
-        UserRepository userRepository
+        InventoryMovementRepository inventoryMovementRepository,
+        UserRepository userRepository,
+        AuditService auditService
     ) {
         this.purchaseOrderRepository = purchaseOrderRepository;
         this.purchaseOrderItemRepository = purchaseOrderItemRepository;
@@ -72,7 +78,9 @@ public class PurchaseOrderService {
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
+        this.inventoryMovementRepository = inventoryMovementRepository;
         this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -236,7 +244,8 @@ public class PurchaseOrderService {
                 .orElseGet(() -> createInventory(poItem.getProduct(), purchaseOrder.getWarehouse()));
 
             inventory.setQuantity(inventory.getQuantity() + receivedQty);
-            inventoryRepository.save(inventory);
+            Inventory savedInventory = inventoryRepository.save(inventory);
+            logMovement(savedInventory, receivedQty, "PO_RECEIVE", "Purchase order receiving", "PURCHASE_ORDER", String.valueOf(poId));
         }
 
         boolean fullyReceived = poItems.stream().allMatch(item -> {
@@ -246,6 +255,13 @@ public class PurchaseOrderService {
 
         purchaseOrder.setReceiver(getCurrentUser());
         purchaseOrder.setStatus(fullyReceived ? STATUS_RECEIVED : STATUS_PARTIALLY_RECEIVED);
+        auditService.logEvent(
+            "PURCHASE_ORDER",
+            "PURCHASE_ORDER",
+            String.valueOf(poId),
+            "RECEIVE",
+            "Purchase order received with status " + purchaseOrder.getStatus()
+        );
 
         return toResponse(purchaseOrderRepository.save(purchaseOrder));
     }
@@ -362,5 +378,27 @@ public class PurchaseOrderService {
 
         return userRepository.findByEmailIgnoreCase(authentication.getName())
             .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    private void logMovement(
+        Inventory inventory,
+        Integer quantityDelta,
+        String movementType,
+        String reason,
+        String referenceType,
+        String referenceId
+    ) {
+        InventoryMovement movement = new InventoryMovement();
+        movement.setInventory(inventory);
+        movement.setProduct(inventory.getProduct());
+        movement.setWarehouse(inventory.getWarehouse());
+        movement.setQuantityDelta(quantityDelta);
+        movement.setMovementType(movementType);
+        movement.setReason(reason);
+        movement.setReferenceType(referenceType);
+        movement.setReferenceId(referenceId);
+        movement.setCreatedAt(LocalDateTime.now());
+        movement.setCreatedBy(getCurrentUser());
+        inventoryMovementRepository.save(movement);
     }
 }

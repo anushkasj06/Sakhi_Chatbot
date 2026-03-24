@@ -39,6 +39,7 @@ public class LowStockAlertService {
     private final UserRoleRepository userRoleRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AuditService auditService;
 
     @Value("${app.alerts.low-stock.threshold:10}")
     private Integer lowStockThreshold;
@@ -49,7 +50,8 @@ public class LowStockAlertService {
         RoleRepository roleRepository,
         UserRoleRepository userRoleRepository,
         UserRepository userRepository,
-        EmailService emailService
+        EmailService emailService,
+        AuditService auditService
     ) {
         this.lowStockAlertRepository = lowStockAlertRepository;
         this.inventoryRepository = inventoryRepository;
@@ -57,6 +59,7 @@ public class LowStockAlertService {
         this.userRoleRepository = userRoleRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.auditService = auditService;
     }
 
     public List<LowStockAlertResponse> listAlerts(String status, boolean mineOnly) {
@@ -88,7 +91,9 @@ public class LowStockAlertService {
         alert.setStatus(STATUS_ACKNOWLEDGED);
         alert.setAcknowledgedBy(user);
         alert.setAcknowledgedAt(LocalDateTime.now());
-        return toResponse(lowStockAlertRepository.save(alert));
+        LowStockAlert saved = lowStockAlertRepository.save(alert);
+        auditService.logEvent("LOW_STOCK_ALERT", "LOW_STOCK_ALERT", String.valueOf(saved.getAlertId()), "ACKNOWLEDGE", "Low stock alert acknowledged");
+        return toResponse(saved);
     }
 
     @Transactional
@@ -100,7 +105,9 @@ public class LowStockAlertService {
 
         alert.setStatus(STATUS_RESOLVED);
         alert.setResolvedAt(LocalDateTime.now());
-        return toResponse(lowStockAlertRepository.save(alert));
+        LowStockAlert saved = lowStockAlertRepository.save(alert);
+        auditService.logEvent("LOW_STOCK_ALERT", "LOW_STOCK_ALERT", String.valueOf(saved.getAlertId()), "RESOLVE", "Low stock alert resolved");
+        return toResponse(saved);
     }
 
     @Transactional
@@ -138,6 +145,9 @@ public class LowStockAlertService {
 
             LowStockAlert saved = lowStockAlertRepository.save(alert);
             sendNotification(saved);
+            if (STATUS_OPEN.equals(saved.getStatus())) {
+                auditService.logEvent("LOW_STOCK_ALERT", "LOW_STOCK_ALERT", String.valueOf(saved.getAlertId()), "OPEN", "Low stock alert opened");
+            }
         }
 
         List<LowStockAlert> activeAlerts = lowStockAlertRepository.findByStatusInOrderByCreatedAtDesc(Arrays.asList(STATUS_OPEN, STATUS_ACKNOWLEDGED));

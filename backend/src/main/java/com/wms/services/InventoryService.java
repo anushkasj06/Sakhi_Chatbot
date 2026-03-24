@@ -3,6 +3,8 @@ package com.wms.services;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,10 +14,14 @@ import com.wms.dtos.response.InventoryResponse;
 import com.wms.dtos.response.InventoryTransferResponse;
 import com.wms.exceptions.ApiException;
 import com.wms.models.Inventory;
+import com.wms.models.InventoryMovement;
 import com.wms.models.Product;
+import com.wms.models.User;
 import com.wms.models.Warehouse;
+import com.wms.repositories.InventoryMovementRepository;
 import com.wms.repositories.InventoryRepository;
 import com.wms.repositories.ProductRepository;
+import com.wms.repositories.UserRepository;
 import com.wms.repositories.WarehouseRepository;
 
 @Service
@@ -24,17 +30,26 @@ public class InventoryService {
     private static final int DEFAULT_LOW_STOCK_THRESHOLD = 10;
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryMovementRepository inventoryMovementRepository;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
+    private final UserRepository userRepository;
+    private final AuditService auditService;
 
     public InventoryService(
         InventoryRepository inventoryRepository,
+        InventoryMovementRepository inventoryMovementRepository,
         ProductRepository productRepository,
-        WarehouseRepository warehouseRepository
+        WarehouseRepository warehouseRepository,
+        UserRepository userRepository,
+        AuditService auditService
     ) {
         this.inventoryRepository = inventoryRepository;
+        this.inventoryMovementRepository = inventoryMovementRepository;
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
+        this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     public List<InventoryResponse> listInventory() {
@@ -82,7 +97,16 @@ public class InventoryService {
         }
 
         inventory.setQuantity(nextQuantity);
-        return toResponse(inventoryRepository.save(inventory));
+        Inventory saved = inventoryRepository.save(inventory);
+        logMovement(saved, request.getQuantityDelta(), "ADJUSTMENT", request.getReason(), request.getReferenceType(), request.getReferenceId());
+        auditService.logEvent(
+            "INVENTORY",
+            "INVENTORY",
+            String.valueOf(saved.getInventoryId()),
+            "ADJUST",
+            "Adjusted inventory by " + request.getQuantityDelta() + " for product " + saved.getProduct().getProductId()
+        );
+        return toResponse(saved);
     }
 
     @Transactional
@@ -112,6 +136,30 @@ public class InventoryService {
 
         Inventory savedSource = inventoryRepository.save(sourceInventory);
         Inventory savedTarget = inventoryRepository.save(targetInventory);
+        logMovement(
+            savedSource,
+            -request.getQuantity(),
+            "TRANSFER_OUT",
+            "Warehouse transfer",
+            "TRANSFER",
+            savedSource.getWarehouse().getWarehouseId() + "->" + savedTarget.getWarehouse().getWarehouseId()
+        );
+        logMovement(
+            savedTarget,
+            request.getQuantity(),
+            "TRANSFER_IN",
+            "Warehouse transfer",
+            "TRANSFER",
+            savedSource.getWarehouse().getWarehouseId() + "->" + savedTarget.getWarehouse().getWarehouseId()
+        );
+        auditService.logEvent(
+            "INVENTORY",
+            "PRODUCT",
+            String.valueOf(product.getProductId()),
+            "TRANSFER",
+            "Transferred " + request.getQuantity() + " units from warehouse "
+                + request.getSourceWarehouseId() + " to " + request.getTargetWarehouseId()
+        );
 
         return new InventoryTransferResponse(
             product.getProductId(),
@@ -167,5 +215,35 @@ public class InventoryService {
             inventory.getQuantity(),
             inventory.getLocationInWarehouse()
         );
+    }
+
+    private void logMovement(
+        Inventory inventory,
+        Integer quantityDelta,
+        String movementType,
+        String reason,
+        String referenceType,
+        String referenceId
+    ) {
+        InventoryMovement movement = new InventoryMovement();
+        movement.setInventory(inventory);
+        movement.setProduct(inventory.getProduct());
+        movement.setWarehouse(inventory.getWarehouse());
+        movement.setQuantityDelta(quantityDelta);
+        movement.setMovementType(movementType);
+        movement.setReason(reason);
+        movement.setReferenceType(referenceType);
+        movement.setReferenceId(referenceId);
+        movement.setCreatedAt(java.time.LocalDateTime.now());
+        movement.setCreatedBy(getCurrentUserOrNull());
+        inventoryMovementRepository.save(movement);
+    }
+
+    private User getCurrentUserOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            return null;
+        }
+        return userRepository.findByEmailIgnoreCase(authentication.getName()).orElse(null);
     }
 }

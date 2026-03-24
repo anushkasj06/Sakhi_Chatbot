@@ -44,17 +44,20 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
+    private final AuditService auditService;
 
     public PaymentService(
         PaymentRepository paymentRepository,
         OrderRepository orderRepository,
         UserRepository userRepository,
-        CustomerRepository customerRepository
+        CustomerRepository customerRepository,
+        AuditService auditService
     ) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.customerRepository = customerRepository;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -74,8 +77,9 @@ public class PaymentService {
         payment.setAmount(amount);
         payment.setPaymentMethod(request.getPaymentMethod().trim().toUpperCase(Locale.ROOT));
         payment.setStatus(STATUS_INITIATED);
-
-        return toResponse(paymentRepository.save(payment));
+        Payment saved = paymentRepository.save(payment);
+        auditService.logEvent("PAYMENT", "PAYMENT", String.valueOf(saved.getPaymentId()), "INTENT", "Payment intent created");
+        return toResponse(saved);
     }
 
     @Transactional
@@ -102,6 +106,8 @@ public class PaymentService {
                 orderRepository.save(order);
             }
         }
+
+        auditService.logEvent("PAYMENT", "PAYMENT", String.valueOf(saved.getPaymentId()), "CONFIRM", "Payment confirmed with status " + saved.getStatus());
 
         return toResponse(saved);
     }
@@ -136,7 +142,9 @@ public class PaymentService {
 
         payment.setStatus(refundAmount.compareTo(payment.getAmount()) == 0 ? STATUS_REFUNDED : STATUS_PARTIALLY_REFUNDED);
         payment.setPaymentDate(LocalDateTime.now());
-        return toResponse(paymentRepository.save(payment));
+        Payment saved = paymentRepository.save(payment);
+        auditService.logEvent("PAYMENT", "PAYMENT", String.valueOf(saved.getPaymentId()), "REFUND", "Refund processed with status " + saved.getStatus());
+        return toResponse(saved);
     }
 
     private Order findOrder(Long orderId) {

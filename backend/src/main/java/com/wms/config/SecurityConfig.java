@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/verify-email").permitAll()
                 .requestMatchers("/actuator/health/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/health/live", "/api/v1/health/ready").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/ping").authenticated()
                 .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
