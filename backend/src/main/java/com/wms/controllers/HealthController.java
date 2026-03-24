@@ -2,6 +2,8 @@ package com.wms.controllers;
 
 import java.time.LocalDateTime;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +17,8 @@ import com.wms.dtos.response.HealthStatusResponse;
 @RequestMapping("/api/v1/health")
 public class HealthController {
 
+    private static final Logger log = LoggerFactory.getLogger(HealthController.class);
+
     private final JdbcTemplate jdbcTemplate;
 
     public HealthController(JdbcTemplate jdbcTemplate) {
@@ -23,6 +27,7 @@ public class HealthController {
 
     @GetMapping("/live")
     public ResponseEntity<ApiResponse<HealthStatusResponse>> live() {
+        log.debug("Liveness check requested");
         return ResponseEntity.ok(ApiResponse.ok(
             "Service is live",
             new HealthStatusResponse("UP", "wms-backend", LocalDateTime.now(), "Application is running")
@@ -34,6 +39,7 @@ public class HealthController {
         Integer dbPing = jdbcTemplate.queryForObject("SELECT 1", Integer.class);
         String status = dbPing != null && dbPing == 1 ? "UP" : "DOWN";
         String details = "UP".equals(status) ? "Application and database are ready" : "Database readiness check failed";
+        log.info("Readiness check completed: status={}", status);
 
         return ResponseEntity.ok(ApiResponse.ok(
             "Readiness checked",

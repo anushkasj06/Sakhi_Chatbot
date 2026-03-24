@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +31,8 @@ import com.wms.repositories.UserRepository;
 
 @Service
 public class PaymentService {
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
     private static final String STATUS_INITIATED = "INITIATED";
     private static final String STATUS_AUTHORIZED = "AUTHORIZED";
@@ -78,6 +82,7 @@ public class PaymentService {
         payment.setPaymentMethod(request.getPaymentMethod().trim().toUpperCase(Locale.ROOT));
         payment.setStatus(STATUS_INITIATED);
         Payment saved = paymentRepository.save(payment);
+        log.info("Payment intent created: paymentId={}, orderId={}, amount={}", saved.getPaymentId(), saved.getOrder().getOrderId(), saved.getAmount());
         auditService.logEvent("PAYMENT", "PAYMENT", String.valueOf(saved.getPaymentId()), "INTENT", "Payment intent created");
         return toResponse(saved);
     }
@@ -98,6 +103,7 @@ public class PaymentService {
         payment.setPaymentDate(LocalDateTime.now());
 
         Payment saved = paymentRepository.save(payment);
+        log.info("Payment confirmed: paymentId={}, orderId={}, status={}", saved.getPaymentId(), saved.getOrder().getOrderId(), saved.getStatus());
 
         if (STATUS_AUTHORIZED.equals(status) || STATUS_CAPTURED.equals(status)) {
             Order order = saved.getOrder();
@@ -143,6 +149,7 @@ public class PaymentService {
         payment.setStatus(refundAmount.compareTo(payment.getAmount()) == 0 ? STATUS_REFUNDED : STATUS_PARTIALLY_REFUNDED);
         payment.setPaymentDate(LocalDateTime.now());
         Payment saved = paymentRepository.save(payment);
+        log.info("Payment refund processed: paymentId={}, status={}, amount={}", saved.getPaymentId(), saved.getStatus(), request.getAmount());
         auditService.logEvent("PAYMENT", "PAYMENT", String.valueOf(saved.getPaymentId()), "REFUND", "Refund processed with status " + saved.getStatus());
         return toResponse(saved);
     }

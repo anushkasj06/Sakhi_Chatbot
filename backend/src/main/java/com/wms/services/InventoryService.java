@@ -2,6 +2,8 @@ package com.wms.services;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,6 +29,7 @@ import com.wms.repositories.WarehouseRepository;
 @Service
 public class InventoryService {
 
+    private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
     private static final int DEFAULT_LOW_STOCK_THRESHOLD = 10;
 
     private final InventoryRepository inventoryRepository;
@@ -98,6 +101,14 @@ public class InventoryService {
 
         inventory.setQuantity(nextQuantity);
         Inventory saved = inventoryRepository.save(inventory);
+        log.info(
+            "Inventory adjusted: inventoryId={}, warehouseId={}, productId={}, quantityDelta={}, newQuantity={}",
+            saved.getInventoryId(),
+            saved.getWarehouse().getWarehouseId(),
+            saved.getProduct().getProductId(),
+            request.getQuantityDelta(),
+            saved.getQuantity()
+        );
         logMovement(saved, request.getQuantityDelta(), "ADJUSTMENT", request.getReason(), request.getReferenceType(), request.getReferenceId());
         auditService.logEvent(
             "INVENTORY",
@@ -136,6 +147,15 @@ public class InventoryService {
 
         Inventory savedSource = inventoryRepository.save(sourceInventory);
         Inventory savedTarget = inventoryRepository.save(targetInventory);
+        log.info(
+            "Inventory transferred: productId={}, sourceWarehouseId={}, targetWarehouseId={}, quantity={}, sourceQtyAfter={}, targetQtyAfter={}",
+            product.getProductId(),
+            request.getSourceWarehouseId(),
+            request.getTargetWarehouseId(),
+            request.getQuantity(),
+            savedSource.getQuantity(),
+            savedTarget.getQuantity()
+        );
         logMovement(
             savedSource,
             -request.getQuantity(),
@@ -237,6 +257,14 @@ public class InventoryService {
         movement.setCreatedAt(java.time.LocalDateTime.now());
         movement.setCreatedBy(getCurrentUserOrNull());
         inventoryMovementRepository.save(movement);
+        log.debug(
+            "Inventory movement logged: inventoryId={}, movementType={}, quantityDelta={}, referenceType={}, referenceId={}",
+            inventory.getInventoryId(),
+            movementType,
+            quantityDelta,
+            referenceType,
+            referenceId
+        );
     }
 
     private User getCurrentUserOrNull() {

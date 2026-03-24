@@ -3,6 +3,8 @@ package com.wms.services;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,8 @@ import com.wms.repositories.UserRepository;
 
 @Service
 public class AuditService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuditService.class);
 
     private final AuditEventRepository auditEventRepository;
     private final UserRepository userRepository;
@@ -36,12 +40,15 @@ public class AuditService {
         event.setCreatedAt(LocalDateTime.now());
         event.setPerformedBy(resolveCurrentUser());
         auditEventRepository.save(event);
+        log.info("Audit event recorded: type={}, entityType={}, entityId={}, action={}", eventType, entityType, entityId, action);
     }
 
     public List<AuditEventResponse> listRecentEvents() {
-        return auditEventRepository.findTop200ByOrderByCreatedAtDesc().stream()
+        List<AuditEventResponse> events = auditEventRepository.findTop200ByOrderByCreatedAtDesc().stream()
             .map(this::toResponse)
             .toList();
+        log.info("Fetched {} recent audit events", events.size());
+        return events;
     }
 
     private User resolveCurrentUser() {

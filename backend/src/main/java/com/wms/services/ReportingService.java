@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.wms.dtos.response.InventoryMovementResponse;
@@ -33,6 +35,8 @@ import com.wms.repositories.WarehouseRepository;
 
 @Service
 public class ReportingService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReportingService.class);
 
     private final InventoryRepository inventoryRepository;
     private final InventoryMovementRepository inventoryMovementRepository;
@@ -68,7 +72,7 @@ public class ReportingService {
             warehouses = warehouseRepository.findAll();
         }
 
-        return warehouses.stream().map(warehouse -> {
+        List<InventorySummaryResponse> summary = warehouses.stream().map(warehouse -> {
             List<Inventory> inventoryList = inventoryRepository.findByWarehouseWarehouseId(warehouse.getWarehouseId());
             int totalQty = inventoryList.stream().mapToInt(Inventory::getQuantity).sum();
             int lowStock = (int) inventoryList.stream().filter(i -> i.getQuantity() <= 10).count();
@@ -81,6 +85,8 @@ public class ReportingService {
                 lowStock
             );
         }).toList();
+        log.info("Generated inventory summary report: warehouseFilter={}, records={}", warehouseId, summary.size());
+        return summary;
     }
 
     public List<InventoryMovementResponse> inventoryMovements(LocalDate fromDate, LocalDate toDate, Long warehouseId) {
@@ -91,7 +97,7 @@ public class ReportingService {
             ? inventoryMovementRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(from, to)
             : inventoryMovementRepository.findByWarehouseWarehouseIdAndCreatedAtBetweenOrderByCreatedAtDesc(warehouseId, from, to);
 
-        return movements.stream().map(m -> new InventoryMovementResponse(
+        List<InventoryMovementResponse> response = movements.stream().map(m -> new InventoryMovementResponse(
             m.getMovementId(),
             m.getCreatedAt(),
             m.getWarehouse().getWarehouseId(),
@@ -104,6 +110,8 @@ public class ReportingService {
             m.getReferenceType(),
             m.getReferenceId()
         )).toList();
+        log.info("Generated inventory movements report: warehouseFilter={}, fromDate={}, toDate={}, records={}", warehouseId, fromDate, toDate, response.size());
+        return response;
     }
 
     public OrdersSummaryResponse ordersSummary(LocalDate fromDate, LocalDate toDate, String status, Long customerId) {
@@ -122,7 +130,9 @@ public class ReportingService {
         Map<String, Long> statusCounts = orders.stream()
             .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
 
-        return new OrdersSummaryResponse(orders.size(), totalAmount, statusCounts);
+        OrdersSummaryResponse response = new OrdersSummaryResponse(orders.size(), totalAmount, statusCounts);
+        log.info("Generated orders summary report: customerFilter={}, statusFilter={}, fromDate={}, toDate={}, totalOrders={}", customerId, status, fromDate, toDate, response.getTotalOrders());
+        return response;
     }
 
     public ShipmentsSummaryResponse shipmentsSummary(LocalDate fromDate, LocalDate toDate, String status, Long warehouseId) {
@@ -136,7 +146,9 @@ public class ReportingService {
         Map<String, Long> statusCounts = shipments.stream()
             .collect(Collectors.groupingBy(Shipment::getStatus, Collectors.counting()));
 
-        return new ShipmentsSummaryResponse(shipments.size(), statusCounts);
+        ShipmentsSummaryResponse response = new ShipmentsSummaryResponse(shipments.size(), statusCounts);
+        log.info("Generated shipments summary report: warehouseFilter={}, statusFilter={}, fromDate={}, toDate={}, totalShipments={}", warehouseId, status, fromDate, toDate, response.getTotalShipments());
+        return response;
     }
 
     public PurchaseOrdersSummaryResponse purchaseOrdersSummary(
@@ -162,7 +174,9 @@ public class ReportingService {
         Map<String, Long> statusCounts = purchaseOrders.stream()
             .collect(Collectors.groupingBy(PurchaseOrder::getStatus, Collectors.counting()));
 
-        return new PurchaseOrdersSummaryResponse(purchaseOrders.size(), totalAmount, statusCounts);
+        PurchaseOrdersSummaryResponse response = new PurchaseOrdersSummaryResponse(purchaseOrders.size(), totalAmount, statusCounts);
+        log.info("Generated purchase orders summary report: warehouseFilter={}, supplierFilter={}, statusFilter={}, fromDate={}, toDate={}, totalPurchaseOrders={}", warehouseId, supplierId, status, fromDate, toDate, response.getTotalPurchaseOrders());
+        return response;
     }
 
     public PaymentsReconciliationResponse paymentsReconciliation(LocalDate fromDate, LocalDate toDate, String status, Long orderId) {
@@ -191,7 +205,9 @@ public class ReportingService {
         Map<String, Long> statusCounts = payments.stream()
             .collect(Collectors.groupingBy(Payment::getStatus, Collectors.counting()));
 
-        return new PaymentsReconciliationResponse(payments.size(), totalAmount, captured, refunded, statusCounts);
+        PaymentsReconciliationResponse response = new PaymentsReconciliationResponse(payments.size(), totalAmount, captured, refunded, statusCounts);
+        log.info("Generated payments reconciliation report: orderFilter={}, statusFilter={}, fromDate={}, toDate={}, totalPayments={}", orderId, status, fromDate, toDate, response.getTotalPayments());
+        return response;
     }
 
     private boolean isWithinRange(LocalDateTime dateTime, LocalDate fromDate, LocalDate toDate) {
