@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,6 +31,8 @@ import com.wms.repositories.UserRoleRepository;
 @Service
 public class LowStockAlertService {
 
+    private static final Logger log = LoggerFactory.getLogger(LowStockAlertService.class);
+
     private static final String STATUS_OPEN = "OPEN";
     private static final String STATUS_ACKNOWLEDGED = "ACKNOWLEDGED";
     private static final String STATUS_RESOLVED = "RESOLVED";
@@ -39,6 +43,7 @@ public class LowStockAlertService {
     private final UserRoleRepository userRoleRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AuditService auditService;
 
     @Value("${app.alerts.low-stock.threshold:10}")
     private Integer lowStockThreshold;
@@ -49,7 +54,8 @@ public class LowStockAlertService {
         RoleRepository roleRepository,
         UserRoleRepository userRoleRepository,
         UserRepository userRepository,
-        EmailService emailService
+        EmailService emailService,
+        AuditService auditService
     ) {
         this.lowStockAlertRepository = lowStockAlertRepository;
         this.inventoryRepository = inventoryRepository;
@@ -57,6 +63,7 @@ public class LowStockAlertService {
         this.userRoleRepository = userRoleRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.auditService = auditService;
     }
 
     public List<LowStockAlertResponse> listAlerts(String status, boolean mineOnly) {
@@ -88,7 +95,10 @@ public class LowStockAlertService {
         alert.setStatus(STATUS_ACKNOWLEDGED);
         alert.setAcknowledgedBy(user);
         alert.setAcknowledgedAt(LocalDateTime.now());
-        return toResponse(lowStockAlertRepository.save(alert));
+        LowStockAlert saved = lowStockAlertRepository.save(alert);
+        log.info("Low stock alert acknowledged: alertId={}, acknowledgedBy={}", saved.getAlertId(), user.getUserId());
+        auditService.logEvent("LOW_STOCK_ALERT", "LOW_STOCK_ALERT", String.valueOf(saved.getAlertId()), "ACKNOWLEDGE", "Low stock alert acknowledged");
+        return toResponse(saved);
     }
 
     @Transactional
@@ -100,7 +110,10 @@ public class LowStockAlertService {
 
         alert.setStatus(STATUS_RESOLVED);
         alert.setResolvedAt(LocalDateTime.now());
-        return toResponse(lowStockAlertRepository.save(alert));
+        LowStockAlert saved = lowStockAlertRepository.save(alert);
+        log.info("Low stock alert resolved: alertId={}", saved.getAlertId());
+        auditService.logEvent("LOW_STOCK_ALERT", "LOW_STOCK_ALERT", String.valueOf(saved.getAlertId()), "RESOLVE", "Low stock alert resolved");
+        return toResponse(saved);
     }
 
     @Transactional
@@ -113,6 +126,7 @@ public class LowStockAlertService {
     public Integer runLowStockScan() {
         int generatedCount = 0;
         List<Inventory> lowStocks = inventoryRepository.findByQuantityLessThanEqual(lowStockThreshold);
+        log.info("Low stock scan started: threshold={}, lowStockInventoryCount={}", lowStockThreshold, lowStocks.size());
 
         for (Inventory inventory : lowStocks) {
             LowStockAlert alert = lowStockAlertRepository
@@ -138,6 +152,9 @@ public class LowStockAlertService {
 
             LowStockAlert saved = lowStockAlertRepository.save(alert);
             sendNotification(saved);
+            if (STATUS_OPEN.equals(saved.getStatus())) {
+                auditService.logEvent("LOW_STOCK_ALERT", "LOW_STOCK_ALERT", String.valueOf(saved.getAlertId()), "OPEN", "Low stock alert opened");
+            }
         }
 
         List<LowStockAlert> activeAlerts = lowStockAlertRepository.findByStatusInOrderByCreatedAtDesc(Arrays.asList(STATUS_OPEN, STATUS_ACKNOWLEDGED));
@@ -150,6 +167,8 @@ public class LowStockAlertService {
                 lowStockAlertRepository.save(active);
             }
         }
+
+        log.info("Low stock scan completed: generatedCount={}", generatedCount);
 
         return generatedCount;
     }
@@ -171,6 +190,7 @@ public class LowStockAlertService {
         alert.setNotificationCount(alert.getNotificationCount() + 1);
         alert.setLastNotifiedAt(LocalDateTime.now());
         lowStockAlertRepository.save(alert);
+        log.info("Low stock alert notification sent: alertId={}, recipientEmail={}, notificationCount={}", alert.getAlertId(), recipient.getEmail(), alert.getNotificationCount());
     }
 
     private User resolveRecipient(Inventory inventory) {

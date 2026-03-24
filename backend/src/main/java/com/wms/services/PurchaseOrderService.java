@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +27,7 @@ import com.wms.dtos.response.PurchaseOrderItemResponse;
 import com.wms.dtos.response.PurchaseOrderResponse;
 import com.wms.exceptions.ApiException;
 import com.wms.models.Inventory;
+import com.wms.models.InventoryMovement;
 import com.wms.models.Product;
 import com.wms.models.PurchaseOrder;
 import com.wms.models.PurchaseOrderItem;
@@ -32,6 +35,7 @@ import com.wms.models.Supplier;
 import com.wms.models.User;
 import com.wms.models.Warehouse;
 import com.wms.repositories.InventoryRepository;
+import com.wms.repositories.InventoryMovementRepository;
 import com.wms.repositories.ProductRepository;
 import com.wms.repositories.PurchaseOrderItemRepository;
 import com.wms.repositories.PurchaseOrderRepository;
@@ -41,6 +45,8 @@ import com.wms.repositories.WarehouseRepository;
 
 @Service
 public class PurchaseOrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(PurchaseOrderService.class);
 
     private static final String STATUS_DRAFT = "DRAFT";
     private static final String STATUS_APPROVED = "APPROVED";
@@ -55,7 +61,9 @@ public class PurchaseOrderService {
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
+    private final InventoryMovementRepository inventoryMovementRepository;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     public PurchaseOrderService(
         PurchaseOrderRepository purchaseOrderRepository,
@@ -64,7 +72,9 @@ public class PurchaseOrderService {
         WarehouseRepository warehouseRepository,
         ProductRepository productRepository,
         InventoryRepository inventoryRepository,
-        UserRepository userRepository
+        InventoryMovementRepository inventoryMovementRepository,
+        UserRepository userRepository,
+        AuditService auditService
     ) {
         this.purchaseOrderRepository = purchaseOrderRepository;
         this.purchaseOrderItemRepository = purchaseOrderItemRepository;
@@ -72,7 +82,9 @@ public class PurchaseOrderService {
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
+        this.inventoryMovementRepository = inventoryMovementRepository;
         this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -85,7 +97,9 @@ public class PurchaseOrderService {
         purchaseOrder.setTotalAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         purchaseOrder.setStatus(STATUS_DRAFT);
         purchaseOrder.setReceiver(null);
-        return toResponse(purchaseOrderRepository.save(purchaseOrder));
+        PurchaseOrder saved = purchaseOrderRepository.save(purchaseOrder);
+        log.info("Purchase order created: poId={}, supplierId={}, warehouseId={}", saved.getPoId(), saved.getSupplier().getSupplierId(), saved.getWarehouse().getWarehouseId());
+        return toResponse(saved);
     }
 
     public List<PurchaseOrderResponse> listPurchaseOrders() {
@@ -129,7 +143,9 @@ public class PurchaseOrderService {
         }
 
         purchaseOrder.setStatus(STATUS_SUBMITTED);
-        return toResponse(purchaseOrderRepository.save(purchaseOrder));
+        PurchaseOrder saved = purchaseOrderRepository.save(purchaseOrder);
+        log.info("Purchase order submitted: poId={}", poId);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -140,7 +156,9 @@ public class PurchaseOrderService {
         }
 
         purchaseOrder.setStatus(STATUS_CANCELLED);
-        return toResponse(purchaseOrderRepository.save(purchaseOrder));
+        PurchaseOrder saved = purchaseOrderRepository.save(purchaseOrder);
+        log.info("Purchase order cancelled: poId={}", poId);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -154,6 +172,7 @@ public class PurchaseOrderService {
         poItem.setQuantity(request.getQuantity());
         poItem.setUnitPrice(normalizeAmount(request.getUnitPrice()));
         purchaseOrderItemRepository.save(poItem);
+        log.info("Purchase order item added: poId={}, productId={}, quantity={}", poId, request.getProductId(), request.getQuantity());
 
         recalculateTotal(purchaseOrder);
         return toResponse(purchaseOrderRepository.save(purchaseOrder));
@@ -172,6 +191,7 @@ public class PurchaseOrderService {
         poItem.setQuantity(request.getQuantity());
         poItem.setUnitPrice(normalizeAmount(request.getUnitPrice()));
         purchaseOrderItemRepository.save(poItem);
+        log.info("Purchase order item updated: poId={}, poItemId={}, productId={}, quantity={}", poId, poItemId, request.getProductId(), request.getQuantity());
 
         recalculateTotal(purchaseOrder);
         return toResponse(purchaseOrderRepository.save(purchaseOrder));
@@ -187,6 +207,7 @@ public class PurchaseOrderService {
             .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Purchase order item not found"));
 
         purchaseOrderItemRepository.delete(poItem);
+        log.info("Purchase order item deleted: poId={}, poItemId={}", poId, poItemId);
         recalculateTotal(purchaseOrder);
         return toResponse(purchaseOrderRepository.save(purchaseOrder));
     }
@@ -236,7 +257,8 @@ public class PurchaseOrderService {
                 .orElseGet(() -> createInventory(poItem.getProduct(), purchaseOrder.getWarehouse()));
 
             inventory.setQuantity(inventory.getQuantity() + receivedQty);
-            inventoryRepository.save(inventory);
+            Inventory savedInventory = inventoryRepository.save(inventory);
+            logMovement(savedInventory, receivedQty, "PO_RECEIVE", "Purchase order receiving", "PURCHASE_ORDER", String.valueOf(poId));
         }
 
         boolean fullyReceived = poItems.stream().allMatch(item -> {
@@ -246,6 +268,14 @@ public class PurchaseOrderService {
 
         purchaseOrder.setReceiver(getCurrentUser());
         purchaseOrder.setStatus(fullyReceived ? STATUS_RECEIVED : STATUS_PARTIALLY_RECEIVED);
+        log.info("Purchase order received: poId={}, status={}", poId, purchaseOrder.getStatus());
+        auditService.logEvent(
+            "PURCHASE_ORDER",
+            "PURCHASE_ORDER",
+            String.valueOf(poId),
+            "RECEIVE",
+            "Purchase order received with status " + purchaseOrder.getStatus()
+        );
 
         return toResponse(purchaseOrderRepository.save(purchaseOrder));
     }
@@ -362,5 +392,33 @@ public class PurchaseOrderService {
 
         return userRepository.findByEmailIgnoreCase(authentication.getName())
             .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    private void logMovement(
+        Inventory inventory,
+        Integer quantityDelta,
+        String movementType,
+        String reason,
+        String referenceType,
+        String referenceId
+    ) {
+        InventoryMovement movement = new InventoryMovement();
+        movement.setInventory(inventory);
+        movement.setProduct(inventory.getProduct());
+        movement.setWarehouse(inventory.getWarehouse());
+        movement.setQuantityDelta(quantityDelta);
+        movement.setMovementType(movementType);
+        movement.setReason(reason);
+        movement.setReferenceType(referenceType);
+        movement.setReferenceId(referenceId);
+        movement.setCreatedAt(LocalDateTime.now());
+        movement.setCreatedBy(getCurrentUser());
+        inventoryMovementRepository.save(movement);
+        log.debug(
+            "Inventory movement logged from PO receive: inventoryId={}, quantityDelta={}, referenceId={}",
+            inventory.getInventoryId(),
+            quantityDelta,
+            referenceId
+        );
     }
 }

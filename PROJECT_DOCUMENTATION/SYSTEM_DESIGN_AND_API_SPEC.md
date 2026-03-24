@@ -432,6 +432,10 @@ Important:
 - GET /reports/purchase-orders-summary
 - GET /reports/payments-reconciliation
 
+Notes:
+- Reporting APIs support optional filters as query params.
+- Date filters use ISO date format (yyyy-MM-dd).
+
 Filters:
 - fromDate, toDate
 - warehouseId
@@ -443,6 +447,10 @@ Filters:
 - GET /health/ready
 - GET /ping
 - GET /audit/events
+
+Notes:
+- /health/ready validates database connectivity in addition to app liveness.
+- /audit/events returns latest audit trail events for ADMIN/AUDITOR roles.
 
 ## 22. Role to Endpoint Access Matrix (High-Level)
 
