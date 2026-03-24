@@ -40,6 +40,14 @@ management:
       exposure:
         include: health,info
 
+logging:
+  file:
+    path: logs
+  level:
+    root: INFO
+    com.wms: DEBUG
+    org.springframework.web: INFO
+
 app:
   jwt:
     issuer: wms
