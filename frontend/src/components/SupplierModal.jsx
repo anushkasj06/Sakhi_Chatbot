@@ -23,7 +23,6 @@ const SupplierModal = ({ supplier, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log(`Field changed: ${name} = "${value}"`);
     setFormData({ ...formData, [name]: value });
     setError('');
   };
@@ -50,6 +49,8 @@ const SupplierModal = ({ supplier, onClose }) => {
 
       console.log('Submitting supplier data:', submitData);
 
+      console.log('Submitting supplier data:', submitData);
+
       if (supplier) {
         await supplierService.update(supplier.supplierId, submitData);
       } else {
@@ -57,9 +58,6 @@ const SupplierModal = ({ supplier, onClose }) => {
       }
       onClose();
     } catch (err) {
-      console.error('Supplier submission error:', err);
-      console.error('Error response:', err.response?.data);
-      
       const errorMessage = err.response?.data?.message || 'Operation failed';
       const errorData = err.response?.data?.data;
       
