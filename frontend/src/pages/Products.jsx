@@ -65,6 +65,25 @@ const Products = () => {
     }
   };
 
+  const handlePriceUpdate = async (product) => {
+    const newPrice = prompt(`Update price for "${product.name}"\nCurrent price: $${product.price}\n\nEnter new price:`);
+    
+    if (newPrice === null) return; // User cancelled
+    
+    const price = parseFloat(newPrice);
+    if (isNaN(price) || price <= 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+
+    try {
+      await productService.updatePrice(product.productId, price);
+      fetchProducts();
+    } catch (err) {
+      alert('Failed to update price');
+    }
+  };
+
   const handleEdit = (product) => {
     setSelectedProduct(product);
     setShowModal(true);
@@ -139,6 +158,9 @@ const Products = () => {
               </div>
               {canManage && (
                 <div className="product-actions">
+                  <button onClick={() => handlePriceUpdate(product)} className="btn-price">
+                    Update Price
+                  </button>
                   <button onClick={() => handleEdit(product)} className="btn-edit">
                     Edit
                   </button>
