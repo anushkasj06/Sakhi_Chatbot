@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import userService from '../services/userService';
+import roleService from '../services/roleService';
 import './Modal.css';
 
 const UserModal = ({ user, onClose }) => {
@@ -10,22 +11,12 @@ const UserModal = ({ user, onClose }) => {
     active: true,
     roles: [],
   });
+  const [availableRoles, setAvailableRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const availableRoles = [
-    'ADMIN',
-    'WAREHOUSE_MANAGER',
-    'RECEIVING_CLERK',
-    'PICKER',
-    'PACKER',
-    'CUSTOMER_SERVICE',
-    'FINANCE',
-    'AUDITOR',
-    'CUSTOMER',
-  ];
-
   useEffect(() => {
+    fetchRoles();
     if (user) {
       setFormData({
         name: user.name || '',
@@ -36,6 +27,15 @@ const UserModal = ({ user, onClose }) => {
       });
     }
   }, [user]);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await roleService.getAll();
+      setAvailableRoles(response.data || []);
+    } catch (err) {
+      console.error('Failed to fetch roles:', err);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -141,8 +141,8 @@ const UserModal = ({ user, onClose }) => {
               style={{ height: 'auto' }}
             >
               {availableRoles.map((role) => (
-                <option key={role} value={role}>
-                  {role}
+                <option key={role.roleId} value={role.roleName}>
+                  {role.roleName}
                 </option>
               ))}
             </select>

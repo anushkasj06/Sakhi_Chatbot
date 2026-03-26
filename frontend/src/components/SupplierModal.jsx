@@ -58,6 +58,8 @@ const SupplierModal = ({ supplier, onClose }) => {
       onClose();
     } catch (err) {
       console.error('Supplier submission error:', err);
+      console.error('Error response:', err.response?.data);
+      
       const errorMessage = err.response?.data?.message || 'Operation failed';
       const errorData = err.response?.data?.data;
       
