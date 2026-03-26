@@ -86,29 +86,25 @@ const Warehouses = () => {
       ) : (
         <div className="warehouses-grid">
           {warehouses.map((warehouse) => (
-            <div key={warehouse.id} className="warehouse-card">
+            <div key={warehouse.warehouseId} className="warehouse-card">
               <div className="warehouse-header">
-                <h3>{warehouse.name}</h3>
-                <span className="warehouse-code">{warehouse.code}</span>
+                <h3>{warehouse.location}</h3>
+                <span className="warehouse-code">ID: {warehouse.warehouseId}</span>
               </div>
               
-              <div className="warehouse-location">
-                <p>{warehouse.address}</p>
-                <p>{warehouse.city}, {warehouse.state} {warehouse.zipCode}</p>
-                <p>{warehouse.country}</p>
-              </div>
-
               <div className="warehouse-details">
+                <div className="detail-item">
+                  <span className="label">Email:</span>
+                  <span className="value">{warehouse.email}</span>
+                </div>
                 <div className="detail-item">
                   <span className="label">Capacity:</span>
                   <span className="value">{warehouse.capacity} units</span>
                 </div>
-                {warehouse.manager && (
+                {warehouse.managerName && (
                   <div className="detail-item">
                     <span className="label">Manager:</span>
-                    <span className="value">
-                      {warehouse.manager.firstName} {warehouse.manager.lastName}
-                    </span>
+                    <span className="value">{warehouse.managerName}</span>
                   </div>
                 )}
               </div>
@@ -118,7 +114,7 @@ const Warehouses = () => {
                   <button onClick={() => handleEdit(warehouse)} className="btn-edit">
                     Edit
                   </button>
-                  <button onClick={() => handleDelete(warehouse.id)} className="btn-delete">
+                  <button onClick={() => handleDelete(warehouse.warehouseId)} className="btn-delete">
                     Delete
                   </button>
                 </div>

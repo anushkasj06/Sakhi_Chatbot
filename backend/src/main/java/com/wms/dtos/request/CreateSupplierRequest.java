@@ -1,5 +1,7 @@
 package com.wms.dtos.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -8,6 +10,7 @@ public class CreateSupplierRequest {
 
     @NotBlank
     @Size(max = 255)
+    @JsonProperty("sName")
     private String sName;
 
     @NotBlank

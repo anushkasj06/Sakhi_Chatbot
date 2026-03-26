@@ -22,7 +22,9 @@ const SupplierModal = ({ supplier, onClose }) => {
   }, [supplier]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    console.log(`Field changed: ${name} = "${value}"`);
+    setFormData({ ...formData, [name]: value });
     setError('');
   };
 
@@ -32,13 +34,32 @@ const SupplierModal = ({ supplier, onClose }) => {
     setError('');
 
     try {
+      // Ensure all fields are trimmed and not empty
+      const submitData = {
+        sName: formData.sName.trim(),
+        contactPerson: formData.contactPerson.trim(),
+        email: formData.email.trim(),
+      };
+
+      // Validate before sending
+      if (!submitData.sName || !submitData.contactPerson || !submitData.email) {
+        setError('All fields are required');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Submitting supplier data:', submitData);
+
       if (supplier) {
-        await supplierService.update(supplier.supplierId, formData);
+        await supplierService.update(supplier.supplierId, submitData);
       } else {
-        await supplierService.create(formData);
+        await supplierService.create(submitData);
       }
       onClose();
     } catch (err) {
+      console.error('Supplier submission error:', err);
+      console.error('Error response:', err.response?.data);
+      
       const errorMessage = err.response?.data?.message || 'Operation failed';
       const errorData = err.response?.data?.data;
       
