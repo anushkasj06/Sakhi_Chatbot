@@ -5,14 +5,9 @@ import './Modal.css';
 
 const WarehouseModal = ({ warehouse, onClose }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: '',
+    location: '',
     capacity: '',
+    email: '',
     managerId: '',
   });
   const [managers, setManagers] = useState([]);
@@ -23,15 +18,10 @@ const WarehouseModal = ({ warehouse, onClose }) => {
     fetchManagers();
     if (warehouse) {
       setFormData({
-        name: warehouse.name || '',
-        code: warehouse.code || '',
-        address: warehouse.address || '',
-        city: warehouse.city || '',
-        state: warehouse.state || '',
-        zipCode: warehouse.zipCode || '',
-        country: warehouse.country || '',
+        location: warehouse.location || '',
         capacity: warehouse.capacity || '',
-        managerId: warehouse.manager?.id || '',
+        email: warehouse.email || '',
+        managerId: warehouse.managerId || '',
       });
     }
   }, [warehouse]);
@@ -41,7 +31,7 @@ const WarehouseModal = ({ warehouse, onClose }) => {
       const response = await userService.getAll();
       const allUsers = response.data || [];
       const managerUsers = allUsers.filter(user => 
-        user.roles?.some(role => role.name === 'WAREHOUSE_MANAGER')
+        user.roles?.some(role => role === 'WAREHOUSE_MANAGER')
       );
       setManagers(managerUsers);
     } catch (err) {
@@ -60,22 +50,31 @@ const WarehouseModal = ({ warehouse, onClose }) => {
     setError('');
 
     try {
-      const submitData = { ...formData };
-      if (!submitData.managerId) {
-        delete submitData.managerId;
-      }
+      const submitData = {
+        location: formData.location.trim(),
+        capacity: parseInt(formData.capacity),
+        email: formData.email.trim(),
+        managerId: formData.managerId ? parseInt(formData.managerId) : null,
+      };
 
       if (warehouse) {
-        await warehouseService.update(warehouse.id, submitData);
-        if (submitData.managerId && submitData.managerId !== warehouse.manager?.id) {
-          await warehouseService.assignManager(warehouse.id, submitData.managerId);
-        }
+        await warehouseService.update(warehouse.warehouseId, submitData);
       } else {
         await warehouseService.create(submitData);
       }
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Operation failed');
+      const errorMessage = err.response?.data?.message || 'Operation failed';
+      const errorData = err.response?.data?.data;
+      
+      if (errorData && typeof errorData === 'object') {
+        const validationErrors = Object.entries(errorData)
+          .map(([field, message]) => `${field}: ${message}`)
+          .join(', ');
+        setError(`Validation failed: ${validationErrors}`);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -92,101 +91,30 @@ const WarehouseModal = ({ warehouse, onClose }) => {
         <form onSubmit={handleSubmit} className="modal-form">
           {error && <div className="error-message">{error}</div>}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="name">Warehouse Name</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                placeholder="Enter warehouse name"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="code">Code</label>
-              <input
-                type="text"
-                id="code"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                required
-                placeholder="Enter code"
-              />
-            </div>
-          </div>
-
           <div className="form-group">
-            <label htmlFor="address">Address</label>
+            <label htmlFor="location">Location</label>
             <input
               type="text"
-              id="address"
-              name="address"
-              value={formData.address}
+              id="location"
+              name="location"
+              value={formData.location}
               onChange={handleChange}
               required
-              placeholder="Enter address"
+              placeholder="Enter warehouse location"
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="city">City</label>
-              <input
-                type="text"
-                id="city"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                required
-                placeholder="Enter city"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="state">State</label>
-              <input
-                type="text"
-                id="state"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                required
-                placeholder="Enter state"
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="zipCode">Zip Code</label>
-              <input
-                type="text"
-                id="zipCode"
-                name="zipCode"
-                value={formData.zipCode}
-                onChange={handleChange}
-                required
-                placeholder="Enter zip code"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="country">Country</label>
-              <input
-                type="text"
-                id="country"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                required
-                placeholder="Enter country"
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Enter warehouse email"
+            />
           </div>
 
           <div className="form-row">
@@ -199,7 +127,7 @@ const WarehouseModal = ({ warehouse, onClose }) => {
                 value={formData.capacity}
                 onChange={handleChange}
                 required
-                min="0"
+                min="1"
                 placeholder="Enter capacity"
               />
             </div>
@@ -212,10 +140,10 @@ const WarehouseModal = ({ warehouse, onClose }) => {
                 value={formData.managerId}
                 onChange={handleChange}
               >
-                <option value="">Select Manager</option>
+                <option value="">Select Manager (Optional)</option>
                 {managers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {manager.firstName} {manager.lastName}
+                  <option key={manager.userId} value={manager.userId}>
+                    {manager.name}
                   </option>
                 ))}
               </select>
